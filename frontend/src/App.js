@@ -15,7 +15,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ── Load data ──────────────────────────────────────
   const loadAll = useCallback(async () => {
     try {
       const [subs, msgs] = await Promise.all([api.getSubjects(), api.getMessages()]);
@@ -23,7 +22,7 @@ export default function App() {
       setMessages(msgs);
       setError(null);
     } catch (e) {
-      setError("서버에 연결할 수 없어요. 백엔드가 실행 중인지 확인해주세요.");
+      setError("서버에 연결할 수 없어요.");
     } finally {
       setLoading(false);
     }
@@ -31,7 +30,6 @@ export default function App() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // ── Filtered + grouped messages ────────────────────
   const filtered =
     currentSubject === "all"
       ? messages
@@ -46,13 +44,11 @@ export default function App() {
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
   const latestId = filtered.length > 0 ? filtered[0].id : null;
 
-  // ── Counts ────────────────────────────────────────
   const counts = { all: messages.length };
   subjects.forEach((s) => {
     counts[s.id] = messages.filter((m) => m.subject_id === s.id).length;
   });
 
-  // ── Handlers ─────────────────────────────────────
   const handleSubjectSelect = (id) => setCurrentSubject(id);
 
   const handleAddMessage = async (data) => {
@@ -86,15 +82,12 @@ export default function App() {
 
   const handleSaveSubjects = async (list) => {
     try {
-      // New subjects (id === null)
       const creates = list.filter((s) => !s.id);
       const updates = list.filter((s) => s.id);
       const delIds = subjects.filter((s) => !list.find((l) => l.id === s.id)).map((s) => s.id);
-
       await Promise.all(delIds.map((id) => api.deleteSubject(id)));
       await Promise.all(updates.map((s) => api.updateSubject(s.id, { name: s.name, color: s.color })));
       await Promise.all(creates.map((s) => api.createSubject({ name: s.name, color: s.color })));
-
       await loadAll();
       setShowManage(false);
       setCurrentSubject("all");
@@ -103,10 +96,9 @@ export default function App() {
     }
   };
 
-  // ── Current subject info ───────────────────────────
   const currentSubjectInfo = subjects.find((s) => s.id === currentSubject);
+  const tabSubjects = [{ id: "all", name: "전체", color: "#888" }, ...subjects];
 
-  // ── Render ────────────────────────────────────────
   if (loading) {
     return (
       <div className="loading-screen">
@@ -118,24 +110,16 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Header */}
       <header className="header">
         <h1>📚 학원 알림장</h1>
         <div className="header-actions">
-          <button className="btn-icon" onClick={() => setShowManage(true)}>
-            ⚙ 과목 관리
-          </button>
-          <button className="btn-icon btn-icon-primary" onClick={() => setShowAdd(true)}>
-            + 문자 추가
-          </button>
+          <button className="btn-icon desktop-only" onClick={() => setShowManage(true)}>⚙ 과목 관리</button>
+          <button className="btn-icon btn-icon-primary" onClick={() => setShowAdd(true)}>+ 문자 추가</button>
         </div>
       </header>
 
       {error && (
-        <div className="error-bar">
-          ⚠ {error}
-          <button onClick={loadAll}>재시도</button>
-        </div>
+        <div className="error-bar">⚠ {error}<button onClick={loadAll}>재시도</button></div>
       )}
 
       <div className="layout">
@@ -146,62 +130,60 @@ export default function App() {
           onSelect={handleSubjectSelect}
           onManage={() => setShowManage(true)}
         />
-
         <main className="main">
           <div className="main-top">
             <div className="main-title">
-              <div
-                className="title-dot"
-                style={{ background: currentSubjectInfo?.color || "#888" }}
-              />
+              <div className="title-dot" style={{ background: currentSubjectInfo?.color || "#888" }} />
               <h2>{currentSubjectInfo?.name || "전체"}</h2>
               <span className="main-count">{filtered.length}건</span>
             </div>
-            <button className="btn-add" onClick={() => setShowAdd(true)}>
-              ＋ 문자 추가
-            </button>
+            <button className="btn-add desktop-only" onClick={() => setShowAdd(true)}>＋ 문자 추가</button>
           </div>
-
           <div className="messages-container">
             {sortedDates.length === 0 ? (
               <div className="empty">
                 <div className="empty-icon">💬</div>
                 <p>아직 추가된 학원 문자가 없어요</p>
-                <p>
-                  <strong>'+ 문자 추가'</strong>를 눌러 시작하세요
-                </p>
+                <p><strong>'+ 문자 추가'</strong>를 눌러 시작하세요</p>
               </div>
             ) : (
               sortedDates.map((date) => (
-                <DateGroup
-                  key={date}
-                  date={date}
-                  messages={byDate[date]}
-                  latestId={latestId}
-                  onToggleHw={handleToggleHw}
-                  onDelete={handleDelete}
-                />
+                <DateGroup key={date} date={date} messages={byDate[date]}
+                  latestId={latestId} onToggleHw={handleToggleHw} onDelete={handleDelete} />
               ))
             )}
           </div>
         </main>
       </div>
 
-      {showAdd && (
-        <AddMessageModal
-          subjects={subjects}
-          defaultSubjectId={currentSubject !== "all" ? currentSubject : null}
-          onSave={handleAddMessage}
-          onClose={() => setShowAdd(false)}
-        />
-      )}
+      {/* 모바일 하단 탭바 */}
+      <nav className="mobile-tabbar">
+        {tabSubjects.map((s) => {
+          const isActive = currentSubject === s.id;
+          const cnt = counts[s.id] || 0;
+          return (
+            <button key={s.id} className={`tab-item ${isActive ? "active" : ""}`}
+              onClick={() => handleSubjectSelect(s.id)} style={{ "--tab-color": s.color }}>
+              <span className="tab-dot" style={{ background: s.color }} />
+              <span className="tab-name">{s.name}</span>
+              {cnt > 0 && <span className="tab-cnt">{cnt}</span>}
+            </button>
+          );
+        })}
+        <button className="tab-item tab-manage" onClick={() => setShowManage(true)}>
+          <span className="tab-icon">⚙</span>
+          <span className="tab-name">관리</span>
+        </button>
+      </nav>
 
+      {showAdd && (
+        <AddMessageModal subjects={subjects}
+          defaultSubjectId={currentSubject !== "all" ? currentSubject : null}
+          onSave={handleAddMessage} onClose={() => setShowAdd(false)} />
+      )}
       {showManage && (
-        <ManageSubjectsModal
-          subjects={subjects}
-          onSave={handleSaveSubjects}
-          onClose={() => setShowManage(false)}
-        />
+        <ManageSubjectsModal subjects={subjects}
+          onSave={handleSaveSubjects} onClose={() => setShowManage(false)} />
       )}
     </div>
   );

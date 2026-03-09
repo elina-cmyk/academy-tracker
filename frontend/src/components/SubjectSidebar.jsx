@@ -11,7 +11,7 @@ export default function SubjectSidebar({ subjects, current, counts, onSelect, on
       >
         <span className="subject-dot" style={{ background: "#888" }} />
         전체
-        <span className="subject-count">{counts.all || 0}</span>
+        {counts.all > 0 && <span className="subject-count">{counts.all}</span>}
       </button>
 
       {subjects.map((s) => (
@@ -22,7 +22,7 @@ export default function SubjectSidebar({ subjects, current, counts, onSelect, on
         >
           <span className="subject-dot" style={{ background: s.color }} />
           {s.name}
-          <span className="subject-count">{counts[s.id] || 0}</span>
+          {counts[s.id] > 0 && <span className="subject-count">{counts[s.id]}</span>}
         </button>
       ))}
 

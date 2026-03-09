@@ -44,9 +44,11 @@ export default function App() {
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
   const latestId = filtered.length > 0 ? filtered[0].id : null;
 
-  const counts = { all: messages.length };
+  // 미완료 숙제 개수만 표시
+  const undone = (msgs) => msgs.filter((m) => !m.hw_done).length;
+  const counts = { all: undone(messages) };
   subjects.forEach((s) => {
-    counts[s.id] = messages.filter((m) => m.subject_id === s.id).length;
+    counts[s.id] = undone(messages.filter((m) => m.subject_id === s.id));
   });
 
   const handleSubjectSelect = (id) => setCurrentSubject(id);
